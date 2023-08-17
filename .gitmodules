@@ -1,3 +1,6 @@
 [submodule "Q3/projects/zkPuzzles"]
 	path = Q3/projects/zkPuzzles
 	url = https://github.com/zku-cohort-3/zkPuzzles.git
+[submodule "circom"]
+	path = circom
+	url = https://github.com/iden3/circom.git
