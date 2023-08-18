@@ -1,6 +1,7 @@
 const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
 const { groth16, plonk } = require("snarkjs");
+const { parseGroth16Calldata, parsePlonkCalldata } = require("./utils");
 
 const wasm_tester = require("circom_tester").wasm;
 
@@ -108,18 +109,7 @@ describe("Multiplier3 with Groth16", function () {
     console.log("2x3x4 =", publicSignals[0]);
 
     const calldata = await groth16.exportSolidityCallData(proof, publicSignals);
-    const args = [];
-    let depth = 0;
-    let lastIndex = 0;
-    for (const [i, c] of Object.entries(calldata)) {
-      if (+i === calldata.length - 1) args.push(JSON.parse(calldata.slice(lastIndex)));
-      if (c === "[") depth++;
-      else if (c === "]") depth--;
-      else if (c === "," && depth === 0) {
-        args.push(JSON.parse(calldata.slice(lastIndex, +i)));
-        lastIndex = +i + 1;
-      }
-    }
+    const args = parseGroth16Calldata(calldata);
 
     const [a, b, c, INPUT] = args;
     expect(await verifier.verifyProof(a, b, c, INPUT)).to.be.true;
@@ -145,10 +135,25 @@ describe("Multiplier3 with PLONK", function () {
   });
 
   it("Should return true for correct proof", async function () {
-    //[assignment] insert your script here
+    const { proof, publicSignals } = await plonk.fullProve(
+      { a: "2", b: "3", c: "4" },
+      "contracts/circuits/Multiplier3Plonk/Multiplier3_js/Multiplier3.wasm",
+      "contracts/circuits/Multiplier3Plonk/circuit_0000.zkey"
+    );
+
+    console.log("2x3x4 =", publicSignals[0]);
+
+    const calldata = await plonk.exportSolidityCallData(proof, publicSignals);
+    const args = parsePlonkCalldata(calldata);
+
+    const [a, INPUT] = args;
+    expect(await verifier.verifyProof(a, INPUT)).to.be.true;
   });
 
   it("Should return false for invalid proof", async function () {
-    //[assignment] insert your script here
+    const a = Array.from({ length: 24 }, () => 0);
+    const INPUT = [0];
+
+    expect(await verifier.verifyProof(a, INPUT)).to.be.false;
   });
 });
